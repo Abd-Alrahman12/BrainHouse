@@ -11,6 +11,7 @@
     "dev:web": "pnpm --filter @workspace/course-platform dev",
     "db:push": "pnpm --filter @workspace/db push",
     "db:seed": "pnpm --filter @workspace/scripts seed"
+    "start": "node --enable-source-maps artifacts/api-server/dist/index.mjs",
   },
   "private": true,
   "devDependencies": {
