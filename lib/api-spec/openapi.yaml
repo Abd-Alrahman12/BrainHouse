@@ -1,0 +1,1410 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Course Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: courses
+    description: Course operations
+  - name: enrollments
+    description: Enrollment operations
+  - name: videos
+    description: Video management
+  - name: files
+    description: File management
+  - name: sessions
+    description: Interactive sessions
+  - name: progress
+    description: Progress tracking
+  - name: devices
+    description: Device management
+  - name: admin
+    description: Admin operations
+  - name: dashboard
+    description: Dashboard data
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses:
+    get:
+      operationId: listCourses
+      tags: [courses]
+      summary: List all published courses
+      responses:
+        "200":
+          description: Course list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+
+  /courses/{id}:
+    get:
+      operationId: getCourse
+      tags: [courses]
+      summary: Get a single course
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /my-courses:
+    get:
+      operationId: listMyCourses
+      tags: [enrollments]
+      summary: List courses the current user is enrolled in
+      responses:
+        "200":
+          description: Enrolled courses with progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnrolledCourse"
+
+  /courses/{courseId}/videos:
+    get:
+      operationId: listCourseVideos
+      tags: [videos]
+      summary: List video sections for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Video sections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoSection"
+
+  /courses/{courseId}/files:
+    get:
+      operationId: listCourseFiles
+      tags: [files]
+      summary: List file categories for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: File categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileCategory"
+
+  /courses/{courseId}/sessions:
+    get:
+      operationId: listCourseSessions
+      tags: [sessions]
+      summary: List interactive sessions for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sessions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InteractiveSession"
+
+  /courses/{courseId}/contact:
+    get:
+      operationId: getCourseContact
+      tags: [courses]
+      summary: Get course contact info
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contact info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseContact"
+
+  /progress/video/{videoId}:
+    post:
+      operationId: markVideoWatched
+      tags: [progress]
+      summary: Mark a video as watched
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Progress updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /progress/course/{courseId}:
+    get:
+      operationId: getCourseProgress
+      tags: [progress]
+      summary: Get progress for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Course progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseProgress"
+
+  /devices:
+    get:
+      operationId: listDevices
+      tags: [devices]
+      summary: List user active devices
+      responses:
+        "200":
+          description: Device list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+
+  /devices/{id}:
+    delete:
+      operationId: removeDevice
+      tags: [devices]
+      summary: Logout from a specific device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary for current user
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  # Admin endpoints
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Admin login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users (admin)
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{id}/approve:
+    patch:
+      operationId: adminApproveUser
+      tags: [admin]
+      summary: Approve a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{id}/deny:
+    patch:
+      operationId: adminDenyUser
+      tags: [admin]
+      summary: Deny a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/courses:
+    get:
+      operationId: adminListCourses
+      tags: [admin]
+      summary: List all courses (admin)
+      responses:
+        "200":
+          description: Course list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+    post:
+      operationId: adminCreateCourse
+      tags: [admin]
+      summary: Create a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCourseBody"
+      responses:
+        "201":
+          description: Course created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+
+  /admin/courses/{id}:
+    patch:
+      operationId: adminUpdateCourse
+      tags: [admin]
+      summary: Update a course
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCourseBody"
+      responses:
+        "200":
+          description: Course updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+    delete:
+      operationId: adminDeleteCourse
+      tags: [admin]
+      summary: Delete a course
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Course deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/courses/{courseId}/enroll:
+    post:
+      operationId: adminEnrollUser
+      tags: [admin]
+      summary: Enroll a user in a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrollUserBody"
+      responses:
+        "201":
+          description: User enrolled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/courses/{courseId}/enrollments:
+    get:
+      operationId: adminListEnrollments
+      tags: [admin]
+      summary: List enrolled users for a course
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Enrollment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnrollmentInfo"
+
+  /admin/courses/{courseId}/sections:
+    post:
+      operationId: adminCreateSection
+      tags: [admin]
+      summary: Create a video section
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSectionBody"
+      responses:
+        "201":
+          description: Section created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoSection"
+
+  /admin/sections/{sectionId}/videos:
+    post:
+      operationId: adminCreateVideo
+      tags: [admin]
+      summary: Add a video to a section
+      parameters:
+        - name: sectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVideoBody"
+      responses:
+        "201":
+          description: Video added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+
+  /admin/courses/{courseId}/file-categories:
+    post:
+      operationId: adminCreateFileCategory
+      tags: [admin]
+      summary: Create a file category
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFileCategoryBody"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileCategory"
+
+  /admin/file-categories/{categoryId}/files:
+    post:
+      operationId: adminCreateFile
+      tags: [admin]
+      summary: Add a file to a category
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFileBody"
+      responses:
+        "201":
+          description: File added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseFile"
+
+  /admin/courses/{courseId}/sessions:
+    post:
+      operationId: adminCreateSession
+      tags: [admin]
+      summary: Create an interactive session
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionBody"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InteractiveSession"
+
+  /admin/videos/{id}:
+    delete:
+      operationId: adminDeleteVideo
+      tags: [admin]
+      summary: Delete a video
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Video deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/sections/{id}:
+    delete:
+      operationId: adminDeleteSection
+      tags: [admin]
+      summary: Delete a video section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Section deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/files/{id}:
+    delete:
+      operationId: adminDeleteFile
+      tags: [admin]
+      summary: Delete a file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: File deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/file-categories/{id}:
+    delete:
+      operationId: adminDeleteFileCategory
+      tags: [admin]
+      summary: Delete a file category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/sessions/{id}:
+    delete:
+      operationId: adminDeleteSession
+      tags: [admin]
+      summary: Delete a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: adminDashboard
+      tags: [admin]
+      summary: Admin dashboard stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/teachers:
+    get:
+      operationId: adminListTeachers
+      tags: [admin]
+      summary: List all teachers
+      responses:
+        "200":
+          description: Teachers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Teacher"
+    post:
+      operationId: adminCreateTeacher
+      tags: [admin]
+      summary: Create a teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeacherBody"
+      responses:
+        "201":
+          description: Teacher created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+
+  /admin/teachers/{id}:
+    patch:
+      operationId: adminUpdateTeacher
+      tags: [admin]
+      summary: Update a teacher
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeacherBody"
+      responses:
+        "200":
+          description: Teacher updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Teacher"
+    delete:
+      operationId: adminDeleteTeacher
+      tags: [admin]
+      summary: Delete a teacher
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Teacher deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - name
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        approved:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - approved
+        - createdAt
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        approved:
+          type: boolean
+        createdAt:
+          type: string
+        enrollmentCount:
+          type: integer
+      required:
+        - id
+        - name
+        - email
+        - role
+        - approved
+        - createdAt
+        - enrollmentCount
+
+    Teacher:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateTeacherBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        whatsapp:
+          type: string
+        bio:
+          type: string
+      required:
+        - name
+
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        coverImage:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - coverImage
+        - status
+        - createdAt
+
+    CourseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        coverImage:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        whatsappNumber:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        teacherId:
+          type: ["integer", "null"]
+        enrolled:
+          type: boolean
+      required:
+        - id
+        - title
+        - description
+        - coverImage
+        - status
+        - createdAt
+        - enrolled
+
+    CreateCourseBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        coverImage:
+          type: string
+        status:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        whatsappNumber:
+          type: string
+        instructorName:
+          type: string
+        teacherId:
+          type: integer
+      required:
+        - title
+        - description
+        - coverImage
+        - status
+
+    UpdateCourseBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        coverImage:
+          type: string
+        status:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        whatsappNumber:
+          type: string
+        instructorName:
+          type: string
+        teacherId:
+          type: integer
+
+    EnrolledCourse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        coverImage:
+          type: string
+        status:
+          type: string
+        progress:
+          type: number
+        totalVideos:
+          type: integer
+        watchedVideos:
+          type: integer
+      required:
+        - id
+        - title
+        - description
+        - coverImage
+        - status
+        - progress
+        - totalVideos
+        - watchedVideos
+
+    VideoSection:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        sortOrder:
+          type: integer
+        courseId:
+          type: integer
+        videos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Video"
+      required:
+        - id
+        - title
+        - sortOrder
+        - courseId
+        - videos
+
+    Video:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        url:
+          type: string
+        sortOrder:
+          type: integer
+        sectionId:
+          type: integer
+        watched:
+          type: boolean
+      required:
+        - id
+        - title
+        - url
+        - sortOrder
+        - sectionId
+
+    FileCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        courseId:
+          type: integer
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseFile"
+      required:
+        - id
+        - name
+        - courseId
+        - files
+
+    CourseFile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        url:
+          type: string
+        categoryId:
+          type: integer
+      required:
+        - id
+        - name
+        - url
+        - categoryId
+
+    InteractiveSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        link:
+          type: string
+        scheduledAt:
+          type: ["string", "null"]
+        courseId:
+          type: integer
+      required:
+        - id
+        - title
+        - link
+        - courseId
+
+    CourseContact:
+      type: object
+      properties:
+        instructorName:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        whatsappNumber:
+          type: ["string", "null"]
+        teacher:
+          $ref: "#/components/schemas/Teacher"
+
+    CourseProgress:
+      type: object
+      properties:
+        courseId:
+          type: integer
+        totalVideos:
+          type: integer
+        watchedVideos:
+          type: integer
+        progress:
+          type: number
+        watchedVideoIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - courseId
+        - totalVideos
+        - watchedVideos
+        - progress
+        - watchedVideoIds
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        ip:
+          type: string
+        userAgent:
+          type: string
+        lastActive:
+          type: string
+        current:
+          type: boolean
+      required:
+        - id
+        - ip
+        - userAgent
+        - lastActive
+        - current
+
+    EnrollUserBody:
+      type: object
+      properties:
+        userId:
+          type: integer
+      required:
+        - userId
+
+    EnrollmentInfo:
+      type: object
+      properties:
+        userId:
+          type: integer
+        userName:
+          type: string
+        userEmail:
+          type: string
+        enrolledAt:
+          type: string
+        progress:
+          type: number
+      required:
+        - userId
+        - userName
+        - userEmail
+        - enrolledAt
+        - progress
+
+    CreateSectionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        sortOrder:
+          type: integer
+      required:
+        - title
+
+    CreateVideoBody:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+        sortOrder:
+          type: integer
+      required:
+        - title
+        - url
+
+    CreateFileCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    CreateFileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+      required:
+        - name
+        - url
+
+    CreateSessionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        link:
+          type: string
+        scheduledAt:
+          type: string
+      required:
+        - title
+        - link
+
+    DashboardSummary:
+      type: object
+      properties:
+        enrolledCourses:
+          type: integer
+        totalProgress:
+          type: number
+        totalVideosWatched:
+          type: integer
+        recentCourses:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnrolledCourse"
+      required:
+        - enrolledCourses
+        - totalProgress
+        - totalVideosWatched
+        - recentCourses
+
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        approvedUsers:
+          type: integer
+        pendingUsers:
+          type: integer
+        totalCourses:
+          type: integer
+        totalEnrollments:
+          type: integer
+      required:
+        - totalUsers
+        - approvedUsers
+        - pendingUsers
+        - totalCourses
+        - totalEnrollments
