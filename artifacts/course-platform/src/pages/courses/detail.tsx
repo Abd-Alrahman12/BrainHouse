@@ -30,7 +30,7 @@ export default function CourseDetailPage({ params }: { params?: { id: string } }
   const { t, isRTL } = useLanguage();
 
   const { data: course, isLoading } = useGetCourse(courseId, { query: { enabled: !!courseId, queryKey: getGetCourseQueryKey(courseId) } });
-  const { data: videos } = useListCourseVideos(courseId, { query: { enabled: !!courseId && !!token, queryKey: getListCourseVideosQueryKey(courseId) } });
+  const { data: videos, error: videosError } = useListCourseVideos(courseId, { query: { enabled: !!courseId && !!token, queryKey: getListCourseVideosQueryKey(courseId) } });
   const { data: files } = useListCourseFiles(courseId, { query: { enabled: !!courseId && !!token, queryKey: getListCourseFilesQueryKey(courseId) } });
   const { data: sessions } = useListCourseSessions(courseId, { query: { enabled: !!courseId && !!token, queryKey: getListCourseSessionsQueryKey(courseId) } });
   const { data: contact } = useGetCourseContact(courseId, { query: { enabled: !!courseId && !!token, queryKey: getGetCourseContactQueryKey(courseId) } });
@@ -394,11 +394,21 @@ export default function CourseDetailPage({ params }: { params?: { id: string } }
           </Tabs>
         ) : (
           <Card className="text-center p-8">
-            <p className="text-muted-foreground mb-4">
-              {token ? t.notEnrolled : t.signInToAccess}
-            </p>
-            {!token && (
-              <Link href="/login"><Button>{t.signIn}</Button></Link>
+            {(videosError as any)?.status === 403 ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">⏳</div>
+                <h3 className="text-xl font-bold mb-2">{t.pendingTitle}</h3>
+                <p className="text-muted-foreground">{t.pendingDesc}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-4">
+                  {token ? t.notEnrolled : t.signInToAccess}
+                </p>
+                {!token && (
+                  <Link href="/login"><Button>{t.signIn}</Button></Link>
+                )}
+              </>
             )}
           </Card>
         )}
