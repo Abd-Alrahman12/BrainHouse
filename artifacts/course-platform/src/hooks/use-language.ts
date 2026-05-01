@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { translations, type Lang } from "@/lib/i18n";
 
-const LANG_KEY = "zamili_lang";
+const LANG_KEY = "brainhouse_lang";
 
 function getInitialLang(): Lang {
   const stored = localStorage.getItem(LANG_KEY);
@@ -13,28 +13,33 @@ function getInitialLang(): Lang {
 let globalLang: Lang = getInitialLang();
 const listeners = new Set<() => void>();
 
+function notifyAll() {
+  listeners.forEach((fn) => fn());
+}
+
 export function useLanguage() {
   const [lang, setLangState] = useState<Lang>(globalLang);
+
+  // Subscribe to global changes from other components
+  useEffect(() => {
+    const update = () => setLangState(globalLang);
+    listeners.add(update);
+    return () => { listeners.delete(update); };
+  }, []);
 
   const setLang = useCallback((newLang: Lang) => {
     globalLang = newLang;
     localStorage.setItem(LANG_KEY, newLang);
     document.documentElement.dir = newLang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = newLang;
-    listeners.forEach((fn) => fn());
     setLangState(newLang);
-  }, []);
-
-  const subscribe = useCallback(() => {
-    const update = () => setLangState(globalLang);
-    listeners.add(update);
-    return () => listeners.delete(update);
+    notifyAll();
   }, []);
 
   const t = translations[lang];
   const isRTL = lang === "ar";
 
-  return { lang, setLang, t, isRTL, subscribe };
+  return { lang, setLang, t, isRTL };
 }
 
 export function applyInitialLang() {
