@@ -26,10 +26,19 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   const [user] = await db.insert(usersTable).values({ name, email, password: hashed }).returning();
 
   const token = signToken({ userId: user.id, role: user.role });
-
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
   const userAgent = req.headers["user-agent"] || "unknown";
-  await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+
+  const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
+  const existingDevice = allDevices.find(d => d.ip === ip && d.userAgent === userAgent);
+
+  if (existingDevice) {
+    await db.update(devicesTable)
+      .set({ lastActive: new Date(), token })
+      .where(eq(devicesTable.id, existingDevice.id));
+  } else {
+    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+  }
 
   res.status(201).json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, approved: user.approved, createdAt: user.createdAt.toISOString() },
@@ -53,17 +62,19 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   const token = signToken({ userId: user.id, role: user.role });
-
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
   const userAgent = req.headers["user-agent"] || "unknown";
 
-  const devices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
-  if (devices.length >= 2) {
-    const oldest = devices.sort((a, b) => a.lastActive.getTime() - b.lastActive.getTime())[0];
-    await db.delete(devicesTable).where(eq(devicesTable.id, oldest.id));
-  }
+  const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
+  const existingDevice = allDevices.find(d => d.ip === ip && d.userAgent === userAgent);
 
-  await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+  if (existingDevice) {
+    await db.update(devicesTable)
+      .set({ lastActive: new Date(), token })
+      .where(eq(devicesTable.id, existingDevice.id));
+  } else {
+    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+  }
 
   res.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, approved: user.approved, createdAt: user.createdAt.toISOString() },
