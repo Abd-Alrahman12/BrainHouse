@@ -4,8 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link } from "wouter";
 import {
   useGetCourse, getGetCourseQueryKey,
@@ -19,14 +23,27 @@ import {
   useAdminCreateSession, useAdminEnrollUser,
   useAdminDeleteVideo, useAdminDeleteSection,
   useAdminDeleteFile, useAdminDeleteFileCategory,
-  useAdminDeleteSession, useAdminUpdateCourse,
+  useAdminDeleteSession,
 } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, ArrowLeft, Users, Video, FileText, Calendar, LogOut } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Users, Video, FileText, Calendar, LogOut, UserMinus } from "lucide-react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/hooks/use-language";
+
+// Custom hook for unenrolling a user
+function useAdminUnenrollUser() {
+  return useMutation({
+    mutationFn: async ({ courseId, userId }: { courseId: number; userId: number }) => {
+      return customFetch(`/api/admin/courses/${courseId}/enrollments/${userId}`, {
+        method: "DELETE",
+      });
+    },
+  });
+}
 
 export default function AdminCourseDetailPage({ params }: { params?: { id: string } }) {
   const courseId = Number(params?.id);
@@ -34,6 +51,7 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t, isRTL } = useLanguage();
 
   const { data: course } = useGetCourse(courseId, { query: { enabled: !!courseId, queryKey: getGetCourseQueryKey(courseId) } });
   const { data: videos, isLoading: videosLoading } = useListCourseVideos(courseId, { query: { enabled: !!courseId, queryKey: getListCourseVideosQueryKey(courseId) } });
@@ -53,6 +71,7 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
   const deleteFile = useAdminDeleteFile();
   const deleteFileCategory = useAdminDeleteFileCategory();
   const deleteSession = useAdminDeleteSession();
+  const unenrollUser = useAdminUnenrollUser();
 
   const [sectionTitle, setSectionTitle] = useState("");
   const [videoTitle, setVideoTitle] = useState("");
@@ -67,6 +86,10 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
   const [sessionDate, setSessionDate] = useState("");
   const [enrollUserId, setEnrollUserId] = useState("");
 
+  // Confirmation dialog state
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState<{ userId: number; userName: string } | null>(null);
+
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: getListCourseVideosQueryKey(courseId) });
     queryClient.invalidateQueries({ queryKey: getListCourseFilesQueryKey(courseId) });
@@ -76,10 +99,35 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
 
   const handleLogout = () => { setAdminToken(null); queryClient.clear(); setLocation("/admin"); };
 
+  const handleRemoveClick = (userId: number, userName: string) => {
+    setStudentToRemove({ userId, userName });
+    setRemoveDialogOpen(true);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!studentToRemove) return;
+    unenrollUser.mutate(
+      { courseId, userId: studentToRemove.userId },
+      {
+        onSuccess: () => {
+          invalidateAll();
+          toast({ title: t.studentRemoved });
+          setRemoveDialogOpen(false);
+          setStudentToRemove(null);
+        },
+        onError: () => {
+          toast({ title: "Error removing student", variant: "destructive" });
+        },
+      }
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <header className="border-b bg-card px-6 py-4 flex items-center justify-between">
-        <Link href="/admin/courses" className="flex items-center gap-2 text-sm font-medium hover:text-primary"><ArrowLeft className="w-4 h-4" /> Back to Courses</Link>
+        <Link href="/admin/courses" className="flex items-center gap-2 text-sm font-medium hover:text-primary">
+          <ArrowLeft className="w-4 h-4" /> Back to Courses
+        </Link>
         <nav className="flex items-center gap-4">
           <Link href="/admin/dashboard" className="text-sm font-medium hover:text-primary transition-colors">Dashboard</Link>
           <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4 mr-1" />Sign Out</Button>
@@ -91,45 +139,46 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
 
         <Tabs defaultValue="videos">
           <TabsList>
-            <TabsTrigger value="videos" className="flex items-center gap-1"><Video className="w-4 h-4" />Videos</TabsTrigger>
-            <TabsTrigger value="files" className="flex items-center gap-1"><FileText className="w-4 h-4" />Files</TabsTrigger>
-            <TabsTrigger value="sessions" className="flex items-center gap-1"><Calendar className="w-4 h-4" />Sessions</TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-1"><Users className="w-4 h-4" />Students</TabsTrigger>
+            <TabsTrigger value="videos" className="flex items-center gap-1"><Video className="w-4 h-4" />{t.videos}</TabsTrigger>
+            <TabsTrigger value="files" className="flex items-center gap-1"><FileText className="w-4 h-4" />{t.files}</TabsTrigger>
+            <TabsTrigger value="sessions" className="flex items-center gap-1"><Calendar className="w-4 h-4" />{t.sessions}</TabsTrigger>
+            <TabsTrigger value="students" className="flex items-center gap-1"><Users className="w-4 h-4" />Students ({enrollments?.length ?? 0})</TabsTrigger>
           </TabsList>
 
+          {/* Videos Tab */}
           <TabsContent value="videos" className="space-y-4">
             <div className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
-                <Label>Section Title</Label>
+                <Label>{t.sectionTitle}</Label>
                 <Input value={sectionTitle} onChange={(e) => setSectionTitle(e.target.value)} placeholder="e.g. Introduction" data-testid="input-section-title" />
               </div>
               <Button onClick={() => {
                 if (!sectionTitle) return;
                 createSection.mutate({ courseId, data: { title: sectionTitle } }, { onSuccess: () => { invalidateAll(); setSectionTitle(""); toast({ title: "Section created" }); } });
-              }} data-testid="button-add-section"><Plus className="w-4 h-4 mr-1" /> Add Section</Button>
+              }} data-testid="button-add-section"><Plus className="w-4 h-4 mr-1" /> {t.addSection}</Button>
             </div>
 
             {videos && videos.length > 0 && (
               <div className="flex gap-2 items-end">
                 <div className="space-y-1">
-                  <Label>Section</Label>
+                  <Label>{t.section}</Label>
                   <Select value={videoSectionId} onValueChange={setVideoSectionId}>
                     <SelectTrigger className="w-40" data-testid="select-video-section"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>{videos.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.title}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="flex-1 space-y-1">
-                  <Label>Video Title</Label>
+                  <Label>{t.videoTitle}</Label>
                   <Input value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="e.g. Lesson 1" data-testid="input-video-title" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <Label>Video URL</Label>
+                  <Label>{t.videoUrl}</Label>
                   <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="YouTube/Vimeo URL" data-testid="input-video-url" />
                 </div>
                 <Button onClick={() => {
                   if (!videoTitle || !videoUrl || !videoSectionId) return;
                   createVideo.mutate({ sectionId: Number(videoSectionId), data: { title: videoTitle, url: videoUrl } }, { onSuccess: () => { invalidateAll(); setVideoTitle(""); setVideoUrl(""); toast({ title: "Video added" }); } });
-                }} data-testid="button-add-video"><Plus className="w-4 h-4 mr-1" /> Add Video</Button>
+                }} data-testid="button-add-video"><Plus className="w-4 h-4 mr-1" /> {t.addVideo}</Button>
               </div>
             )}
 
@@ -155,39 +204,40 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
             ))}
           </TabsContent>
 
+          {/* Files Tab */}
           <TabsContent value="files" className="space-y-4">
             <div className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
-                <Label>Category Name</Label>
+                <Label>{t.categoryName}</Label>
                 <Input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="e.g. Lecture Notes" data-testid="input-cat-name" />
               </div>
               <Button onClick={() => {
                 if (!catName) return;
                 createFileCategory.mutate({ courseId, data: { name: catName } }, { onSuccess: () => { invalidateAll(); setCatName(""); toast({ title: "Category created" }); } });
-              }} data-testid="button-add-category"><Plus className="w-4 h-4 mr-1" /> Add Category</Button>
+              }} data-testid="button-add-category"><Plus className="w-4 h-4 mr-1" /> {t.addCategory}</Button>
             </div>
 
             {files && files.length > 0 && (
               <div className="flex gap-2 items-end">
                 <div className="space-y-1">
-                  <Label>Category</Label>
+                  <Label>{t.category}</Label>
                   <Select value={fileCatId} onValueChange={setFileCatId}>
                     <SelectTrigger className="w-40" data-testid="select-file-cat"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>{files.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="flex-1 space-y-1">
-                  <Label>File Name</Label>
+                  <Label>{t.fileName}</Label>
                   <Input value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="e.g. Chapter 1 Notes" data-testid="input-file-name" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <Label>File URL</Label>
+                  <Label>{t.fileUrl}</Label>
                   <Input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://..." data-testid="input-file-url" />
                 </div>
                 <Button onClick={() => {
                   if (!fileName || !fileUrl || !fileCatId) return;
                   createFile.mutate({ categoryId: Number(fileCatId), data: { name: fileName, url: fileUrl } }, { onSuccess: () => { invalidateAll(); setFileName(""); setFileUrl(""); toast({ title: "File added" }); } });
-                }} data-testid="button-add-file"><Plus className="w-4 h-4 mr-1" /> Add File</Button>
+                }} data-testid="button-add-file"><Plus className="w-4 h-4 mr-1" /> {t.addFile}</Button>
               </div>
             )}
 
@@ -212,24 +262,25 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
             ))}
           </TabsContent>
 
+          {/* Sessions Tab */}
           <TabsContent value="sessions" className="space-y-4">
             <div className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
-                <Label>Session Title</Label>
+                <Label>{t.sessionTitle}</Label>
                 <Input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="e.g. Q&A Session" data-testid="input-session-title" />
               </div>
               <div className="flex-1 space-y-1">
-                <Label>Meeting Link</Label>
+                <Label>{t.meetingLink}</Label>
                 <Input value={sessionLink} onChange={(e) => setSessionLink(e.target.value)} placeholder="https://zoom.us/..." data-testid="input-session-link" />
               </div>
               <div className="space-y-1">
-                <Label>Date (optional)</Label>
+                <Label>{t.dateOptional}</Label>
                 <Input type="datetime-local" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} data-testid="input-session-date" />
               </div>
               <Button onClick={() => {
                 if (!sessionTitle || !sessionLink) return;
                 createSession.mutate({ courseId, data: { title: sessionTitle, link: sessionLink, ...(sessionDate ? { scheduledAt: new Date(sessionDate).toISOString() } : {}) } }, { onSuccess: () => { invalidateAll(); setSessionTitle(""); setSessionLink(""); setSessionDate(""); toast({ title: "Session created" }); } });
-              }} data-testid="button-add-session"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+              }} data-testid="button-add-session"><Plus className="w-4 h-4 mr-1" /> {t.add}</Button>
             </div>
 
             {sessionsLoading ? <Skeleton className="h-32" /> : sessions?.map((s) => (
@@ -246,12 +297,14 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
             ))}
           </TabsContent>
 
+          {/* Students Tab */}
           <TabsContent value="students" className="space-y-4">
+            {/* Enroll new user */}
             <div className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
-                <Label>Enroll User</Label>
+                <Label>{t.enrollUser}</Label>
                 <Select value={enrollUserId} onValueChange={setEnrollUserId}>
-                  <SelectTrigger data-testid="select-enroll-user"><SelectValue placeholder="Select a user" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-enroll-user"><SelectValue placeholder={t.selectUser} /></SelectTrigger>
                   <SelectContent>
                     {allUsers?.filter((u) => u.role !== "admin").map((u) => (
                       <SelectItem key={u.id} value={String(u.id)}>{u.name} ({u.email})</SelectItem>
@@ -262,23 +315,76 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
               <Button onClick={() => {
                 if (!enrollUserId) return;
                 enrollUser.mutate({ courseId, data: { userId: Number(enrollUserId) } }, { onSuccess: () => { invalidateAll(); setEnrollUserId(""); toast({ title: "User enrolled" }); } });
-              }} data-testid="button-enroll"><Plus className="w-4 h-4 mr-1" /> Enroll</Button>
+              }} data-testid="button-enroll"><Plus className="w-4 h-4 mr-1" /> {t.enroll}</Button>
             </div>
 
-            {enrollmentsLoading ? <Skeleton className="h-32" /> : enrollments?.map((e) => (
-              <Card key={e.userId}>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{e.userName}</p>
-                    <p className="text-sm text-muted-foreground">{e.userEmail} - Enrolled {new Date(e.enrolledAt).toLocaleDateString()}</p>
-                  </div>
-                  <span className="text-sm font-medium">{Math.round(e.progress)}% progress</span>
-                </CardContent>
-              </Card>
-            ))}
+            {/* Enrolled students list */}
+            {enrollmentsLoading ? <Skeleton className="h-32" /> : (
+              <div className="space-y-3">
+                {enrollments?.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">No students enrolled yet.</p>
+                )}
+                {enrollments?.map((e) => (
+                  <Card key={e.userId} className="border-l-4 border-l-primary/30">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-semibold">{e.userName}</p>
+                        <p className="text-sm text-muted-foreground">{e.userEmail}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Enrolled: {new Date(e.enrolledAt).toLocaleDateString()} &nbsp;·&nbsp;
+                          Progress: <span className="font-medium text-foreground">{Math.round(e.progress)}%</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {/* Progress bar */}
+                        <div className="w-24 bg-muted rounded-full h-2 hidden sm:block">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${Math.round(e.progress)}%` }}
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveClick(e.userId, e.userName)}
+                          data-testid={`button-remove-${e.userId}`}
+                        >
+                          <UserMinus className="w-4 h-4 mr-1" />
+                          {t.removeFromCourse}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.confirmRemoveTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.confirmRemove}
+              {studentToRemove && (
+                <span className="block mt-2 font-semibold text-foreground">{studentToRemove.userName}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setStudentToRemove(null)}>{t.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t.confirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
