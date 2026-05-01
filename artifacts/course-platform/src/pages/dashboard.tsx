@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useGetMe, useGetDashboardSummary, getGetMeQueryKey, getGetDashboardSummaryQueryKey, useListMyEnrolledCourses, getListMyEnrolledCoursesQueryKey } from "@workspace/api-client-react";
+import { useGetMe, useGetDashboardSummary, getGetMeQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, TrendingUp, Video, ArrowRight } from "lucide-react";
+import { BookOpen, TrendingUp, Video } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useLanguage } from "@/hooks/use-language";
 
@@ -12,7 +12,6 @@ export default function DashboardPage() {
   const { t, isRTL } = useLanguage();
   const { data: me } = useGetMe({ query: { queryKey: getGetMeQueryKey() } });
   const { data: summary, isLoading } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
-  const { data: enrolledCourses } = useListMyEnrolledCourses({ query: { queryKey: getListMyEnrolledCoursesQueryKey() } });
 
   if (me?.approved === false) {
     return (
@@ -73,29 +72,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div>
-          <h2 className="text-xl font-bold mb-4">{t.continueLearning}</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {enrolledCourses?.map((course) => (
-              <Card key={course.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    <img src={course.coverImage} alt={course.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{course.title}</p>
-                    <p className="text-sm text-muted-foreground">{Math.round(course.progress ?? 0)}% {t.progress}</p>
-                    <Progress value={course.progress ?? 0} className="mt-1 h-1.5" />
-                  </div>
-                  <Link href={`/courses/${course.id}`}>
-                    <Button variant="ghost" size="sm">
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="flex gap-4">
+          <Link href="/my-courses">
+            <Button>{t.continueLearning}</Button>
+          </Link>
+          <Link href="/courses">
+            <Button variant="outline">{t.browseCourses}</Button>
+          </Link>
         </div>
       </main>
     </div>
