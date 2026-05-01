@@ -17,7 +17,6 @@ export default function MyCoursesPage() {
       <Navbar />
       <main className="max-w-6xl mx-auto p-6 space-y-6">
         <h1 className="text-3xl font-bold">{t.myCourses}</h1>
-
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-72" />)}
@@ -43,7 +42,7 @@ export default function MyCoursesPage() {
             ))}
             {courses?.length === 0 && (
               <div className="col-span-3 text-center py-16 text-muted-foreground">
-                <p className="text-lg">You have no enrolled courses yet.</p>
+                <p className="text-lg">No enrolled courses yet.</p>
                 <Link href="/courses">
                   <Button className="mt-4">{t.browseCourses}</Button>
                 </Link>
