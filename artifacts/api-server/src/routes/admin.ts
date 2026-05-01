@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import {
   db, usersTable, coursesTable, enrollmentsTable,
   videoSectionsTable, videosTable, fileCategoriesTable,
-  filesTable, interactiveSessionsTable, videoProgressTable,
+  filesTable, interactiveSessionsTable, videoProgressTable, devicesTable,
 } from "@workspace/db";
 import {
   LoginBody, AdminApproveUserParams, AdminDenyUserParams,
@@ -45,10 +45,12 @@ router.get("/admin/users", requireAdmin, async (_req, res): Promise<void> => {
   const result = [];
   for (const u of users) {
     const enrollments = await db.select().from(enrollmentsTable).where(eq(enrollmentsTable.userId, u.id));
+    const devices = await db.select().from(devicesTable).where(eq(devicesTable.userId, u.id));
     result.push({
       id: u.id, name: u.name, email: u.email, role: u.role,
       approved: u.approved, createdAt: u.createdAt.toISOString(),
       enrollmentCount: enrollments.length,
+      deviceCount: devices.length,
     });
   }
   res.json(result);
@@ -186,16 +188,16 @@ router.delete("/admin/courses/:courseId/enrollments/:userId", requireAdmin, asyn
   const courseId = Number(req.params.courseId);
   const userId = Number(req.params.userId);
   if (isNaN(courseId) || isNaN(userId)) { res.status(400).json({ error: "Invalid courseId or userId" }); return; }
-
   const sections = await db.select().from(videoSectionsTable).where(eq(videoSectionsTable.courseId, courseId));
   for (const section of sections) {
     const vids = await db.select().from(videosTable).where(eq(videosTable.sectionId, section.id));
     for (const v of vids) {
-      await db.delete(videoProgressTable).where(eq(videoProgressTable.videoId, v.id));
+      await db.delete(videoProgressTable).where(sql\`\${videoProgressTable.userId} = \${userId} AND \${videoProgressTable.videoId} = \${v.id}\`);
     }
   }
-
-  const [deleted] = await db.delete(enrollmentsTable).where(eq(enrollmentsTable.userId, userId)).returning();
+  const [deleted] = await db.delete(enrollmentsTable).where(
+    sql\`\${enrollmentsTable.userId} = \${userId} AND \${enrollmentsTable.courseId} = \${courseId}\`
+  ).returning();
   if (!deleted) { res.status(404).json({ error: "Enrollment not found" }); return; }
   res.json({ message: "User removed from course" });
 });
