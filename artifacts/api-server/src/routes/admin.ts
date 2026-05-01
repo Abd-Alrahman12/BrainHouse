@@ -186,16 +186,16 @@ router.delete("/admin/courses/:courseId/enrollments/:userId", requireAdmin, asyn
   const courseId = Number(req.params.courseId);
   const userId = Number(req.params.userId);
   if (isNaN(courseId) || isNaN(userId)) { res.status(400).json({ error: "Invalid courseId or userId" }); return; }
+
   const sections = await db.select().from(videoSectionsTable).where(eq(videoSectionsTable.courseId, courseId));
   for (const section of sections) {
     const vids = await db.select().from(videosTable).where(eq(videosTable.sectionId, section.id));
     for (const v of vids) {
-      await db.delete(videoProgressTable).where(sql\`\${videoProgressTable.userId} = \${userId} AND \${videoProgressTable.videoId} = \${v.id}\`);
+      await db.delete(videoProgressTable).where(eq(videoProgressTable.videoId, v.id));
     }
   }
-  const [deleted] = await db.delete(enrollmentsTable).where(
-    sql\`\${enrollmentsTable.userId} = \${userId} AND \${enrollmentsTable.courseId} = \${courseId}\`
-  ).returning();
+
+  const [deleted] = await db.delete(enrollmentsTable).where(eq(enrollmentsTable.userId, userId)).returning();
   if (!deleted) { res.status(404).json({ error: "Enrollment not found" }); return; }
   res.json({ message: "User removed from course" });
 });
