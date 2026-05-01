@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db, coursesTable, enrollmentsTable, videoSectionsTable, videosTable, fileCategoriesTable, filesTable, interactiveSessionsTable, videoProgressTable } from "@workspace/db";
 import { GetCourseParams, ListCourseVideosParams, ListCourseFilesParams, ListCourseSessionsParams, GetCourseContactParams, MarkVideoWatchedParams, GetCourseProgressParams } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireApproved } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -43,7 +43,7 @@ router.get("/courses/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/my-courses", requireAuth, async (req, res): Promise<void> => {
+router.get("/my-courses", requireApproved, async (req, res): Promise<void> => {
   const enrollments = await db.select().from(enrollmentsTable)
     .where(eq(enrollmentsTable.userId, req.user!.userId));
 
@@ -77,7 +77,7 @@ router.get("/my-courses", requireAuth, async (req, res): Promise<void> => {
   res.json(result);
 });
 
-router.get("/courses/:courseId/videos", requireAuth, async (req, res): Promise<void> => {
+router.get("/courses/:courseId/videos", requireApproved, async (req, res): Promise<void> => {
   const params = ListCourseVideosParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -101,7 +101,7 @@ router.get("/courses/:courseId/videos", requireAuth, async (req, res): Promise<v
   res.json(result);
 });
 
-router.get("/courses/:courseId/files", requireAuth, async (req, res): Promise<void> => {
+router.get("/courses/:courseId/files", requireApproved, async (req, res): Promise<void> => {
   const params = ListCourseFilesParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -117,7 +117,7 @@ router.get("/courses/:courseId/files", requireAuth, async (req, res): Promise<vo
   res.json(result);
 });
 
-router.get("/courses/:courseId/sessions", requireAuth, async (req, res): Promise<void> => {
+router.get("/courses/:courseId/sessions", requireApproved, async (req, res): Promise<void> => {
   const params = ListCourseSessionsParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -131,7 +131,7 @@ router.get("/courses/:courseId/sessions", requireAuth, async (req, res): Promise
   })));
 });
 
-router.get("/courses/:courseId/contact", requireAuth, async (req, res): Promise<void> => {
+router.get("/courses/:courseId/contact", requireApproved, async (req, res): Promise<void> => {
   const params = GetCourseContactParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -146,7 +146,7 @@ router.get("/courses/:courseId/contact", requireAuth, async (req, res): Promise<
   });
 });
 
-router.post("/progress/video/:videoId", requireAuth, async (req, res): Promise<void> => {
+router.post("/progress/video/:videoId", requireApproved, async (req, res): Promise<void> => {
   const params = MarkVideoWatchedParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -164,7 +164,7 @@ router.post("/progress/video/:videoId", requireAuth, async (req, res): Promise<v
   res.json({ message: "Video marked as watched" });
 });
 
-router.get("/progress/course/:courseId", requireAuth, async (req, res): Promise<void> => {
+router.get("/progress/course/:courseId", requireApproved, async (req, res): Promise<void> => {
   const params = GetCourseProgressParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
