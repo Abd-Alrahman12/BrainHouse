@@ -3,14 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
-import { useListMyEnrolledCourses, getListMyEnrolledCoursesQueryKey } from "@workspace/api-client-react";
+import { useListMyCourses, getListMyCoursesQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Navbar } from "@/components/Navbar";
 import { useLanguage } from "@/hooks/use-language";
 
 export default function MyCoursesPage() {
   const { t, isRTL } = useLanguage();
-  const { data: courses, isLoading } = useListMyEnrolledCourses({ query: { queryKey: getListMyEnrolledCoursesQueryKey() } });
+  const { data: courses, isLoading } = useListMyCourses({ query: { queryKey: getListMyCoursesQueryKey() } });
 
   return (
     <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
