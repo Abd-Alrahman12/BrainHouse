@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import {
   db, usersTable, coursesTable, enrollmentsTable,
@@ -137,7 +137,7 @@ router.post("/admin/courses/:courseId/enroll", requireAdmin, async (req, res): P
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const existing = await db.select().from(enrollmentsTable).where(
-    sql`${enrollmentsTable.userId} = ${parsed.data.userId} AND ${enrollmentsTable.courseId} = ${params.data.courseId}`
+    and(eq(enrollmentsTable.userId, parsed.data.userId), eq(enrollmentsTable.courseId, params.data.courseId))
   );
   if (existing.length > 0) {
     res.status(400).json({ error: "User already enrolled" });
@@ -168,7 +168,7 @@ router.get("/admin/courses/:courseId/enrollments", requireAdmin, async (req, res
       totalVideos += vids.length;
       for (const v of vids) {
         const wp = await db.select().from(videoProgressTable).where(
-          sql`${videoProgressTable.userId} = ${user.id} AND ${videoProgressTable.videoId} = ${v.id}`
+          and(eq(videoProgressTable.userId, user.id), eq(videoProgressTable.videoId, v.id))
         );
         if (wp.length > 0) watchedVideos++;
       }
@@ -188,15 +188,19 @@ router.delete("/admin/courses/:courseId/enrollments/:userId", requireAdmin, asyn
   const courseId = Number(req.params.courseId);
   const userId = Number(req.params.userId);
   if (isNaN(courseId) || isNaN(userId)) { res.status(400).json({ error: "Invalid courseId or userId" }); return; }
+
   const sections = await db.select().from(videoSectionsTable).where(eq(videoSectionsTable.courseId, courseId));
   for (const section of sections) {
     const vids = await db.select().from(videosTable).where(eq(videosTable.sectionId, section.id));
     for (const v of vids) {
-      await db.delete(videoProgressTable).where(sql\`\${videoProgressTable.userId} = \${userId} AND \${videoProgressTable.videoId} = \${v.id}\`);
+      await db.delete(videoProgressTable).where(
+        and(eq(videoProgressTable.userId, userId), eq(videoProgressTable.videoId, v.id))
+      );
     }
   }
+
   const [deleted] = await db.delete(enrollmentsTable).where(
-    sql\`\${enrollmentsTable.userId} = \${userId} AND \${enrollmentsTable.courseId} = \${courseId}\`
+    and(eq(enrollmentsTable.userId, userId), eq(enrollmentsTable.courseId, courseId))
   ).returning();
   if (!deleted) { res.status(404).json({ error: "Enrollment not found" }); return; }
   res.json({ message: "User removed from course" });
