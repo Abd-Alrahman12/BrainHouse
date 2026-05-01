@@ -300,32 +300,65 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
 
           {/* Students Tab */}
           <TabsContent value="students" className="space-y-4">
-            {/* Enroll new user */}
-            <div className="flex gap-2 items-end">
-              <div className="space-y-1">
-                <Label>Search User</Label>
-                <Input
-                  placeholder="Search by name or email..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-48"
-                />
+            {/* Enroll new user - searchable */}
+            <div className="space-y-2">
+              <Label>{t.enrollUser}</Label>
+              <div className="flex gap-2 items-start">
+                <div className="flex-1 space-y-1 relative">
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={userSearch}
+                    onChange={(e) => { setUserSearch(e.target.value); setEnrollUserId(""); }}
+                    data-testid="input-user-search"
+                  />
+                  {/* Dropdown suggestions */}
+                  {userSearch.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {allUsers
+                        ?.filter((u) =>
+                          u.role !== "admin" &&
+                          u.approved &&
+                          (u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                           u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                        )
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b last:border-0"
+                            onClick={() => {
+                              setEnrollUserId(String(u.id));
+                              setUserSearch(`${u.name} (${u.email})`);
+                            }}
+                          >
+                            <span className="font-medium">{u.name}</span>
+                            <span className="text-muted-foreground ml-2">{u.email}</span>
+                          </button>
+                        ))}
+                      {allUsers?.filter((u) =>
+                        u.role !== "admin" && u.approved &&
+                        (u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+                         u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                      ).length === 0 && (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">No approved users found</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!enrollUserId) return;
+                    enrollUser.mutate(
+                      { courseId, data: { userId: Number(enrollUserId) } },
+                      { onSuccess: () => { invalidateAll(); setEnrollUserId(""); setUserSearch(""); toast({ title: "User enrolled" }); } }
+                    );
+                  }}
+                  disabled={!enrollUserId}
+                  data-testid="button-enroll"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> {t.enroll}
+                </Button>
               </div>
-              <div className="flex-1 space-y-1">
-                <Label>{t.enrollUser}</Label>
-                <Select value={enrollUserId} onValueChange={setEnrollUserId}>
-                  <SelectTrigger data-testid="select-enroll-user"><SelectValue placeholder={t.selectUser} /></SelectTrigger>
-                  <SelectContent>
-                    {allUsers?.filter((u) => u.role !== "admin" && u.approved && (userSearch === "" || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))).map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>{u.name} ({u.email})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => {
-                if (!enrollUserId) return;
-                enrollUser.mutate({ courseId, data: { userId: Number(enrollUserId) } }, { onSuccess: () => { invalidateAll(); setEnrollUserId(""); toast({ title: "User enrolled" }); } });
-              }} data-testid="button-enroll"><Plus className="w-4 h-4 mr-1" /> {t.enroll}</Button>
             </div>
 
             {/* Enrolled students list */}
