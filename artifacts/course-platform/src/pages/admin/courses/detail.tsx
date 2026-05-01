@@ -85,6 +85,7 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
   const [sessionLink, setSessionLink] = useState("");
   const [sessionDate, setSessionDate] = useState("");
   const [enrollUserId, setEnrollUserId] = useState("");
+  const [userSearch, setUserSearch] = useState("");
 
   // Confirmation dialog state
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -301,12 +302,21 @@ export default function AdminCourseDetailPage({ params }: { params?: { id: strin
           <TabsContent value="students" className="space-y-4">
             {/* Enroll new user */}
             <div className="flex gap-2 items-end">
+              <div className="space-y-1">
+                <Label>Search User</Label>
+                <Input
+                  placeholder="Search by name or email..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-48"
+                />
+              </div>
               <div className="flex-1 space-y-1">
                 <Label>{t.enrollUser}</Label>
                 <Select value={enrollUserId} onValueChange={setEnrollUserId}>
                   <SelectTrigger data-testid="select-enroll-user"><SelectValue placeholder={t.selectUser} /></SelectTrigger>
                   <SelectContent>
-                    {allUsers?.filter((u) => u.role !== "admin").map((u) => (
+                    {allUsers?.filter((u) => u.role !== "admin" && u.approved && (userSearch === "" || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))).map((u) => (
                       <SelectItem key={u.id} value={String(u.id)}>{u.name} ({u.email})</SelectItem>
                     ))}
                   </SelectContent>
