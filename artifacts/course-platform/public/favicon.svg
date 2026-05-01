@@ -1,3 +1,13 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Coffee cup -->
+  <rect x="8" y="25" width="20" height="11" rx="2.5" fill="#6366f1"/>
+  <rect x="7" y="22" width="22" height="5" rx="2" fill="#4f46e5"/>
+  <!-- Handle -->
+  <path d="M28 27h3a3 3 0 0 1 0 6h-3" stroke="#6366f1" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Brain left lobe -->
+  <ellipse cx="14" cy="13" rx="5" ry="6" fill="#6366f1"/>
+  <!-- Brain right lobe -->
+  <ellipse cx="24" cy="13" rx="5" ry="6" fill="#6366f1"/>
+  <!-- Brain center -->
+  <path d="M19 8 Q19.5 13 19 18" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.6"/>
 </svg>
