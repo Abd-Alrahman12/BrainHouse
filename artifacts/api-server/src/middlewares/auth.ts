@@ -1,5 +1,7 @@
 import { type Request, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "default-secret-change-me";
 
@@ -41,6 +43,35 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }
+  req.user = payload;
+  req.deviceToken = token;
+  next();
+}
+
+// Requires auth AND that the user is approved
+export async function requireApproved(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const token = header.slice(7);
+  const payload = verifyToken(token);
+  if (!payload) {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId));
+  if (!user) {
+    res.status(401).json({ error: "User not found" });
+    return;
+  }
+  if (!user.approved) {
+    res.status(403).json({ error: "Your account is pending approval. Please wait for admin approval." });
+    return;
+  }
+
   req.user = payload;
   req.deviceToken = token;
   next();
