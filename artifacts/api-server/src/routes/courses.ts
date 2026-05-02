@@ -1,17 +1,38 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, coursesTable, enrollmentsTable, videoSectionsTable, videosTable, fileCategoriesTable, filesTable, interactiveSessionsTable, videoProgressTable } from "@workspace/db";
+import { db, coursesTable, enrollmentsTable, videoSectionsTable, videosTable, fileCategoriesTable, filesTable, interactiveSessionsTable, videoProgressTable, teachersTable } from "@workspace/db";
 import { GetCourseParams, ListCourseVideosParams, ListCourseFilesParams, ListCourseSessionsParams, GetCourseContactParams, MarkVideoWatchedParams, GetCourseProgressParams } from "@workspace/api-zod";
 import { requireAuth, requireApproved } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+const COLLEGES = [
+  { id: 1, name_ar: "كلية العلوم", name_en: "Science" },
+  { id: 2, name_ar: "كلية الآداب", name_en: "Arts" },
+  { id: 3, name_ar: "كلية العلوم التربوية", name_en: "Education" },
+  { id: 4, name_ar: "كلية تكنولوجيا المعلومات", name_en: "IT" },
+  { id: 5, name_ar: "كلية الأعمال", name_en: "Business" },
+];
+
+
+
 router.get("/courses", async (_req, res): Promise<void> => {
   const courses = await db.select().from(coursesTable).orderBy(coursesTable.createdAt);
-  res.json(courses.map((c) => ({
-    id: c.id, title: c.title, description: c.description, coverImage: c.coverImage,
-    status: c.status, createdAt: c.createdAt.toISOString(),
-  })));
+  const result = [];
+  for (const c of courses) {
+    let teacher = null;
+    if (c.teacherId) {
+      const [t] = await db.select().from(teachersTable).where(eq(teachersTable.id, c.teacherId));
+      if (t) teacher = { id: t.id, name: t.name, bio: t.bio, whatsapp: t.whatsapp };
+    }
+    const college = c.collegeId ? COLLEGES.find(col => col.id === c.collegeId) || null : null;
+    result.push({
+      id: c.id, title: c.title, description: c.description, coverImage: c.coverImage,
+      status: c.status, createdAt: c.createdAt.toISOString(),
+      teacher, college, collegeId: c.collegeId, teacherId: c.teacherId,
+    });
+  }
+  res.json(result);
 });
 
 router.get("/courses/:id", async (req, res): Promise<void> => {
