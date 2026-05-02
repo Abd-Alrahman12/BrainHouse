@@ -190,6 +190,31 @@ export default function CourseDetailPage({ params }: { params?: { id: string } }
               <Badge variant={course.status === "free" ? "secondary" : "outline"}>{course.status === "free" ? t.free : t.locked}</Badge>
             </div>
             <p className="text-muted-foreground">{course.description}</p>
+            {/* College badge */}
+            {(course as any).college && (
+              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 w-fit">
+                {isRTL ? (course as any).college.name_ar : (course as any).college.name_en}
+              </Badge>
+            )}
+            {/* Teacher info */}
+            {(course as any).teacher && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  {(course as any).teacher.name[0]}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{(course as any).teacher.name}</p>
+                  {(course as any).teacher.bio && <p className="text-xs text-muted-foreground">{(course as any).teacher.bio}</p>}
+                </div>
+                {(course as any).teacher.whatsapp && (
+                  <a href={`https://wa.me/${(course as any).teacher.whatsapp}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="text-green-600 border-green-200">
+                      <MessageCircle className="w-4 h-4 mr-1" /> {t.chatOnWhatsApp}
+                    </Button>
+                  </a>
+                )}
+              </div>
+            )}
             {progress && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
