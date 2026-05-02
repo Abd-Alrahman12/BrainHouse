@@ -10,10 +10,32 @@ import { BrainHouseLogo } from "@/components/BrainHouseLogo";
 
 function getFingerprint(): string {
   const key = "bh_fp";
+  
+  // Build device fingerprint from hardware characteristics
+  const deviceSignature = [
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    navigator.hardwareConcurrency,
+    navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    // Extract OS from userAgent only (not browser)
+    navigator.userAgent.match(/(Windows NT[\s\d.]+|Mac OS X[\s\d_]+|Android[\s\d.]+|iPhone OS[\s\d_]+|Linux)/)?.[0] || "unknown",
+  ].join("|");
+
+  // Hash it into a short ID
+  let hash = 0;
+  for (let i = 0; i < deviceSignature.length; i++) {
+    hash = ((hash << 5) - hash) + deviceSignature.charCodeAt(i);
+    hash |= 0;
+  }
+  const deviceId = `dev_${Math.abs(hash).toString(36)}`;
+
+  // Store it (in case hardware info changes slightly between sessions)
   let fp = localStorage.getItem(key);
   if (!fp) {
-    fp = `${Math.random().toString(36).slice(2)}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem(key, fp);
+    localStorage.setItem(key, deviceId);
+    fp = deviceId;
   }
   return fp;
 }
