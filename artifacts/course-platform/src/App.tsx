@@ -18,6 +18,7 @@ import AdminDashboardPage from "@/pages/admin/dashboard";
 import AdminUsersPage from "@/pages/admin/users";
 import AdminCoursesPage from "@/pages/admin/courses";
 import AdminCourseDetailPage from "@/pages/admin/courses/detail";
+import AdminTeachersPage from "@/pages/admin/teachers";
 
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -77,6 +78,9 @@ function Router() {
       </Route>
       <Route path="/admin/courses/:id">
         {(params) => <ProtectedRoute admin component={AdminCourseDetailPage} params={params} />}
+      </Route>
+      <Route path="/admin/teachers">
+        {() => <ProtectedRoute admin component={AdminTeachersPage} />}
       </Route>
 
       <Route component={NotFound} />
