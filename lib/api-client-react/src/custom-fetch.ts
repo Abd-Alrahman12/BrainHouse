@@ -337,6 +337,10 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  try {
+  headers.set("x-device-fingerprint", getDeviceFingerprint());
+} catch { /* not in browser */ }
+
   if (
     typeof init.body === "string" &&
     !headers.has("content-type") &&
@@ -368,4 +372,14 @@ export async function customFetch<T = unknown>(
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+
+  function getDeviceFingerprint(): string {
+  const key = "bh_device_fp";
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = `${Date.now()}-${Math.random().toString(36).slice(2)}-${navigator.userAgent.length}`;
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
 }
