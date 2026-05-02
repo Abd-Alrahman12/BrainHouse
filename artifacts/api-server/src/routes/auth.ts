@@ -28,7 +28,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const hashed = await bcrypt.hash(password, 10);
-  const [user] = await db.insert(usersTable).values({ name, email, password: hashed }).returning();
+ const [user] = await db.insert(usersTable).values({ name, email, password: hashed, approved: true }).returning();
 
   const token = signToken({ userId: user.id, role: user.role });
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
