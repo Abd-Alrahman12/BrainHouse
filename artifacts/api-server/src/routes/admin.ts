@@ -1,10 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import {
   db, usersTable, coursesTable, enrollmentsTable,
   videoSectionsTable, videosTable, fileCategoriesTable,
-  filesTable, interactiveSessionsTable, videoProgressTable, devicesTable,
+  filesTable, interactiveSessionsTable, videoProgressTable, devicesTable, teachersTable,
 } from "@workspace/db";
 import {
   LoginBody, AdminApproveUserParams, AdminDenyUserParams,
@@ -88,20 +88,36 @@ router.patch("/admin/users/:id/deny", requireAdmin, async (req, res): Promise<vo
 
 router.get("/admin/courses", requireAdmin, async (_req, res): Promise<void> => {
   const courses = await db.select().from(coursesTable).orderBy(coursesTable.createdAt);
-  res.json(courses.map((c) => ({
-    id: c.id, title: c.title, description: c.description, coverImage: c.coverImage,
-    status: c.status, createdAt: c.createdAt.toISOString(),
-  })));
+  const result = [];
+  for (const c of courses) {
+    let teacher = null;
+    if (c.teacherId) {
+      const [t] = await db.select().from(teachersTable).where(eq(teachersTable.id, c.teacherId));
+      if (t) teacher = { id: t.id, name: t.name };
+    }
+    const college = c.collegeId ? COLLEGES.find(col => col.id === c.collegeId) || null : null;
+    result.push({
+      id: c.id, title: c.title, description: c.description, coverImage: c.coverImage,
+      status: c.status, createdAt: c.createdAt.toISOString(),
+      teacherId: c.teacherId, collegeId: c.collegeId, teacher, college,
+    });
+  }
+  res.json(result);
 });
 
 router.post("/admin/courses", requireAdmin, async (req, res): Promise<void> => {
   const parsed = AdminCreateCourseBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [course] = await db.insert(coursesTable).values(parsed.data).returning();
+  const [course] = await db.insert(coursesTable).values({
+    ...parsed.data,
+    teacherId: req.body.teacherId ? Number(req.body.teacherId) : null,
+    collegeId: req.body.collegeId ? Number(req.body.collegeId) : null,
+  }).returning();
   res.status(201).json({
     id: course.id, title: course.title, description: course.description,
     coverImage: course.coverImage, status: course.status, createdAt: course.createdAt.toISOString(),
+    teacherId: course.teacherId, collegeId: course.collegeId,
   });
 });
 
@@ -137,7 +153,7 @@ router.post("/admin/courses/:courseId/enroll", requireAdmin, async (req, res): P
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const existing = await db.select().from(enrollmentsTable).where(
-    and(eq(enrollmentsTable.userId, parsed.data.userId), eq(enrollmentsTable.courseId, params.data.courseId))
+    sql`${enrollmentsTable.userId} = ${parsed.data.userId} AND ${enrollmentsTable.courseId} = ${params.data.courseId}`
   );
   if (existing.length > 0) {
     res.status(400).json({ error: "User already enrolled" });
@@ -168,7 +184,7 @@ router.get("/admin/courses/:courseId/enrollments", requireAdmin, async (req, res
       totalVideos += vids.length;
       for (const v of vids) {
         const wp = await db.select().from(videoProgressTable).where(
-          and(eq(videoProgressTable.userId, user.id), eq(videoProgressTable.videoId, v.id))
+          sql`${videoProgressTable.userId} = ${user.id} AND ${videoProgressTable.videoId} = ${v.id}`
         );
         if (wp.length > 0) watchedVideos++;
       }
@@ -188,19 +204,15 @@ router.delete("/admin/courses/:courseId/enrollments/:userId", requireAdmin, asyn
   const courseId = Number(req.params.courseId);
   const userId = Number(req.params.userId);
   if (isNaN(courseId) || isNaN(userId)) { res.status(400).json({ error: "Invalid courseId or userId" }); return; }
-
   const sections = await db.select().from(videoSectionsTable).where(eq(videoSectionsTable.courseId, courseId));
   for (const section of sections) {
     const vids = await db.select().from(videosTable).where(eq(videosTable.sectionId, section.id));
     for (const v of vids) {
-      await db.delete(videoProgressTable).where(
-        and(eq(videoProgressTable.userId, userId), eq(videoProgressTable.videoId, v.id))
-      );
+      await db.delete(videoProgressTable).where(sql\`\${videoProgressTable.userId} = \${userId} AND \${videoProgressTable.videoId} = \${v.id}\`);
     }
   }
-
   const [deleted] = await db.delete(enrollmentsTable).where(
-    and(eq(enrollmentsTable.userId, userId), eq(enrollmentsTable.courseId, courseId))
+    sql\`\${enrollmentsTable.userId} = \${userId} AND \${enrollmentsTable.courseId} = \${courseId}\`
   ).returning();
   if (!deleted) { res.status(404).json({ error: "Enrollment not found" }); return; }
   res.json({ message: "User removed from course" });
@@ -339,4 +351,112 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
   });
 });
 
+
+// ============================================================
+// TEACHERS
+// ============================================================
+
+router.get("/admin/teachers", requireAdmin, async (_req, res): Promise<void> => {
+  const teachers = await db.select().from(teachersTable).orderBy(teachersTable.createdAt);
+  res.json(teachers);
+});
+
+router.post("/admin/teachers", requireAdmin, async (req, res): Promise<void> => {
+  const { name, email, whatsapp, bio } = req.body;
+  if (!name) { res.status(400).json({ error: "Name is required" }); return; }
+  const [teacher] = await db.insert(teachersTable).values({ name, email, whatsapp, bio }).returning();
+  res.status(201).json(teacher);
+});
+
+router.patch("/admin/teachers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { name, email, whatsapp, bio } = req.body;
+  const [teacher] = await db.update(teachersTable).set({ name, email, whatsapp, bio }).where(eq(teachersTable.id, id)).returning();
+  if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
+  res.json(teacher);
+});
+
+router.delete("/admin/teachers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db.delete(teachersTable).where(eq(teachersTable.id, id));
+  res.json({ message: "Teacher deleted" });
+});
+
+// ============================================================
+// COLLEGES (static list)
+// ============================================================
+
+const COLLEGES = [
+  { id: 1, name_ar: "كلية العلوم", name_en: "Science" },
+  { id: 2, name_ar: "كلية الآداب", name_en: "Arts" },
+  { id: 3, name_ar: "كلية العلوم التربوية", name_en: "Education" },
+  { id: 4, name_ar: "كلية تكنولوجيا المعلومات", name_en: "IT" },
+  { id: 5, name_ar: "كلية الأعمال", name_en: "Business" },
+];
+
+router.get("/admin/colleges", requireAdmin, async (_req, res): Promise<void> => {
+  res.json(COLLEGES);
+});
+
+router.get("/colleges", async (_req, res): Promise<void> => {
+  res.json(COLLEGES);
+});
+
 export default router;
+
+
+router.get("/admin/teachers", requireAdmin, async (_req, res): Promise<void> => {
+  const teachers = await db.select().from(teachersTable).orderBy(teachersTable.createdAt);
+  res.json(teachers);
+});
+
+router.post("/admin/teachers", requireAdmin, async (req, res): Promise<void> => {
+  const { name, email, whatsapp, bio } = req.body;
+  if (!name) { res.status(400).json({ error: "Name is required" }); return; }
+  const [teacher] = await db.insert(teachersTable).values({ name, email, whatsapp, bio }).returning();
+  res.status(201).json(teacher);
+});
+
+router.patch("/admin/teachers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { name, email, whatsapp, bio } = req.body;
+  const [teacher] = await db.update(teachersTable).set({ name, email, whatsapp, bio }).where(eq(teachersTable.id, id)).returning();
+  if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
+  res.json(teacher);
+});
+
+router.delete("/admin/teachers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db.delete(teachersTable).where(eq(teachersTable.id, id));
+  res.json({ message: "Teacher deleted" });
+});
+
+// ============================================================
+// COLLEGES (static list)
+// ============================================================
+
+router.get("/admin/colleges", requireAdmin, async (_req, res): Promise<void> => {
+  const colleges = [
+    { id: 1, name_ar: "كلية العلوم", name_en: "Science" },
+    { id: 2, name_ar: "كلية الآداب", name_en: "Arts" },
+    { id: 3, name_ar: "كلية العلوم التربوية", name_en: "Education" },
+    { id: 4, name_ar: "كلية تكنولوجيا المعلومات", name_en: "IT" },
+    { id: 5, name_ar: "كلية الأعمال", name_en: "Business" },
+  ];
+  res.json(colleges);
+});
+
+router.get("/colleges", async (_req, res): Promise<void> => {
+  const colleges = [
+    { id: 1, name_ar: "كلية العلوم", name_en: "Science" },
+    { id: 2, name_ar: "كلية الآداب", name_en: "Arts" },
+    { id: 3, name_ar: "كلية العلوم التربوية", name_en: "Education" },
+    { id: 4, name_ar: "كلية تكنولوجيا المعلومات", name_en: "IT" },
+    { id: 5, name_ar: "كلية الأعمال", name_en: "Business" },
+  ];
+  res.json(colleges);
+});
