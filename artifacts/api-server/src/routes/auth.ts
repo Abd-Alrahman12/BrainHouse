@@ -7,6 +7,11 @@ import { signToken, requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+function getDeviceKey(req: any): string {
+  const fingerprint = req.headers["x-device-fingerprint"] as string;
+  return fingerprint || req.headers["user-agent"] || "unknown";
+}
+
 router.post("/auth/register", async (req, res): Promise<void> => {
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
@@ -27,17 +32,17 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   const token = signToken({ userId: user.id, role: user.role });
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
-  const userAgent = req.headers["user-agent"] || "unknown";
+  const deviceKey = getDeviceKey(req);
 
   const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
-  const existingDevice = allDevices.find(d => d.userAgent === userAgent);
+  const existingDevice = allDevices.find(d => d.userAgent === deviceKey);
 
   if (existingDevice) {
     await db.update(devicesTable)
       .set({ lastActive: new Date(), token, ip })
       .where(eq(devicesTable.id, existingDevice.id));
   } else {
-    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent: deviceKey });
   }
 
   res.status(201).json({
@@ -63,17 +68,17 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   const token = signToken({ userId: user.id, role: user.role });
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
-  const userAgent = req.headers["user-agent"] || "unknown";
+  const deviceKey = getDeviceKey(req);
 
   const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
-  const existingDevice = allDevices.find(d => d.userAgent === userAgent);
+  const existingDevice = allDevices.find(d => d.userAgent === deviceKey);
 
   if (existingDevice) {
     await db.update(devicesTable)
       .set({ lastActive: new Date(), token, ip })
       .where(eq(devicesTable.id, existingDevice.id));
   } else {
-    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
+    await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent: deviceKey });
   }
 
   res.json({
