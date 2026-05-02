@@ -30,11 +30,11 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   const userAgent = req.headers["user-agent"] || "unknown";
 
   const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
-  const existingDevice = allDevices.find(d => d.ip === ip && d.userAgent === userAgent);
+  const existingDevice = allDevices.find(d => d.userAgent === userAgent);
 
   if (existingDevice) {
     await db.update(devicesTable)
-      .set({ lastActive: new Date(), token })
+      .set({ lastActive: new Date(), token, ip })
       .where(eq(devicesTable.id, existingDevice.id));
   } else {
     await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
@@ -66,11 +66,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const userAgent = req.headers["user-agent"] || "unknown";
 
   const allDevices = await db.select().from(devicesTable).where(eq(devicesTable.userId, user.id));
-  const existingDevice = allDevices.find(d => d.ip === ip && d.userAgent === userAgent);
+  const existingDevice = allDevices.find(d => d.userAgent === userAgent);
 
   if (existingDevice) {
     await db.update(devicesTable)
-      .set({ lastActive: new Date(), token })
+      .set({ lastActive: new Date(), token, ip })
       .where(eq(devicesTable.id, existingDevice.id));
   } else {
     await db.insert(devicesTable).values({ userId: user.id, token, ip, userAgent });
