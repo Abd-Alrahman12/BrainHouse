@@ -108,6 +108,8 @@ router.get("/admin/courses", requireAdmin, async (_req, res): Promise<void> => {
       id: c.id, title: c.title, description: c.description, coverImage: c.coverImage,
       status: c.status, createdAt: c.createdAt.toISOString(),
       teacherId: c.teacherId, collegeId: c.collegeId, teacher, college,
+      contactEmail: c.contactEmail, contactPhone: c.contactPhone,
+      whatsappNumber: c.whatsappNumber, instructorName: c.instructorName,
     });
   }
   res.json(result);
