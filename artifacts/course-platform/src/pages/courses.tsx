@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 import { useListCourses, getListCoursesQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, MessageCircle, Lock, Unlock, X } from "lucide-react";
+import { Search, MessageCircle, Lock, Unlock, X, BookOpen } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useLanguage } from "@/hooks/use-language";
-import { COLLEGES, getCollegeName } from "@/lib/colleges";
+import { COLLEGES } from "@/lib/colleges";
 
 export default function CoursesPage() {
   const { t, isRTL, lang } = useLanguage();
@@ -17,7 +17,7 @@ export default function CoursesPage() {
   const [search, setSearch] = useState("");
   const [selectedCollege, setSelectedCollege] = useState<number | null>(null);
 
-  const filtered = courses?.filter((c: any) => {
+  const filtered = (courses as any[])?.filter((c: any) => {
     const matchSearch = !search ||
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.description.toLowerCase().includes(search.toLowerCase());
@@ -26,108 +26,151 @@ export default function CoursesPage() {
   });
 
   const openWhatsApp = (title: string) => {
-    const message = encodeURIComponent(`${t.whatsappMsg}${title}`);
-    window.open(`https://wa.me/?text=${message}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${t.whatsappMsg}${title}`)}`, "_blank");
   };
 
   return (
     <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <Navbar />
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{t.browseCourses}</h1>
-          <p className="text-muted-foreground mt-1">{t.discover}</p>
+      {/* Page Header */}
+      <div className="border-b border-border bg-card/50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          <h1 className="text-2xl md:text-3xl font-bold mb-1">{t.browseCourses}</h1>
+          <p className="text-muted-foreground">{t.discover}</p>
+        </div>
+      </div>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {/* Search + Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
+            <Input
+              placeholder={t.search}
+              className={`${isRTL ? "pr-9" : "pl-9"} bg-background`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
-          <Input
-            placeholder={t.search}
-            className={isRTL ? "pr-9" : "pl-9"}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* College Filter */}
+        {/* College Filters */}
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedCollege === null ? "default" : "outline"}
-            size="sm"
+          <button
             onClick={() => setSelectedCollege(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 border ${
+              selectedCollege === null
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground bg-card"
+            }`}
           >
             {lang === "ar" ? "الكل" : "All"}
-          </Button>
+          </button>
           {COLLEGES.map((college) => (
-            <Button
+            <button
               key={college.id}
-              variant={selectedCollege === college.id ? "default" : "outline"}
-              size="sm"
               onClick={() => setSelectedCollege(selectedCollege === college.id ? null : college.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 border ${
+                selectedCollege === college.id
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground bg-card"
+              }`}
             >
               {lang === "ar" ? college.name_ar : college.name_en}
-            </Button>
+            </button>
           ))}
           {selectedCollege && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedCollege(null)}>
-              <X className="w-3 h-3 mr-1" /> {lang === "ar" ? "مسح" : "Clear"}
-            </Button>
+            <button
+              onClick={() => setSelectedCollege(null)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground border border-dashed border-border transition-colors"
+            >
+              <X className="w-3 h-3" />
+              {lang === "ar" ? "مسح" : "Clear"}
+            </button>
           )}
         </div>
 
+        {/* Course Grid */}
         {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-80" />)}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filtered?.map((course: any) => (
-              <Card key={course.id} className="overflow-hidden group" data-testid={`card-course-${course.id}`}>
-                <div className="aspect-video bg-muted overflow-hidden">
-                  <img src={course.coverImage} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="rounded-2xl border border-border overflow-hidden">
+                <Skeleton className="aspect-video w-full" />
+                <div className="p-5 space-y-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-9 w-full" />
                 </div>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h3 className="font-semibold text-lg">{course.title}</h3>
-                    <Badge variant={course.status === "free" ? "secondary" : "outline"} className="flex items-center gap-1">
-                      {course.status === "free" ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                      {course.status === "free" ? t.free : t.locked}
-                    </Badge>
-                  </div>
-
-                  {/* College badge */}
-                  {course.college && (
-                    <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-xs">
-                      {lang === "ar" ? course.college.name_ar : course.college.name_en}
-                    </Badge>
-                  )}
-
-                  {/* Teacher name */}
-                  {course.teacher && (
-                    <p className="text-xs text-muted-foreground">👨‍🏫 {course.teacher.name}</p>
-                  )}
-
-                  <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
-
-                  <div className="flex gap-2">
-                    <Link href={`/courses/${course.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full" data-testid={`button-view-${course.id}`}>{t.viewCourse}</Button>
-                    </Link>
-                    <Button variant="ghost" size="icon" onClick={() => openWhatsApp(course.title)} title={t.requestWhatsApp}>
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
             ))}
           </div>
-        )}
+        ) : filtered?.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-16 text-center">
+            <BookOpen className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No courses found.</p>
+            {(search || selectedCollege) && (
+              <Button variant="ghost" size="sm" className="mt-3" onClick={() => { setSearch(""); setSelectedCollege(null); }}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {filtered?.map((course: any) => (
+              <div key={course.id} className="group rounded-2xl border border-border bg-card overflow-hidden card-hover">
+                <div className="aspect-video bg-muted overflow-hidden relative">
+                  <img src={course.coverImage} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute top-3 right-3">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
+                      course.status === "free"
+                        ? "bg-emerald-500/90 text-white"
+                        : "bg-black/60 text-white"
+                    }`}>
+                      {course.status === "free" ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                      {course.status === "free" ? t.free : t.locked}
+                    </span>
+                  </div>
+                </div>
 
-        {filtered?.length === 0 && !isLoading && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg">No courses found.</p>
+                <div className="p-5 space-y-3">
+                  {(course.college || course.teacher) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {course.college && (
+                        <span className="badge-info">
+                          {lang === "ar" ? course.college.name_ar : course.college.name_en}
+                        </span>
+                      )}
+                      {course.teacher && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+                          👨‍🏫 {course.teacher.name}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <h3 className="font-semibold text-base leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                    {course.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
+
+                  <div className="flex gap-2 pt-1">
+                    <Link href={`/courses/${course.id}`} className="flex-1">
+                      <Button className="w-full h-9 text-sm btn-premium" size="sm">{t.viewCourse}</Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0 shrink-0"
+                      onClick={() => openWhatsApp(course.title)}
+                      title={t.requestWhatsApp}
+                    >
+                      <MessageCircle className="w-4 h-4 text-green-600" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
