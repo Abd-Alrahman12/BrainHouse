@@ -141,8 +141,8 @@ export const translations = {
     studentRemoved: "Student removed from course",
   },
   ar: {
-    siteName: "بيت العقول",
-    siteNameAr: "بيت العقول",
+    siteName: "BrainHouse",
+    siteNameAr: "BrainHouse",
     browseCourses: "تصفح الكورسات",
     signIn: "تسجيل الدخول",
     getStarted: "ابدأ الآن",
