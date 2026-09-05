@@ -3,7 +3,7 @@ export type Lang = "en" | "ar";
 export const translations = {
   en: {
     siteName: "BrainHouse",
-    siteNameAr: "بيت العقول",
+    siteNameAr: "BrainHouse",
     browseCourses: "Browse Courses",
     signIn: "Sign In",
     getStarted: "Get Started",
