@@ -11,6 +11,40 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <Navbar />
 
+
+         {/* Hero */}
+      <section className="hero-gradient relative overflow-hidden">
+        <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-24 md:py-32 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8 fade-in">
+            <Zap className="w-3.5 h-3.5" />
+            <span>The modern learning platform</span>
+          </div>
+
+    
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.1] fade-in" style={{ animationDelay: "0.1s" }}>
+            {t.heroTitle}{" "}
+            <span className="gradient-text">{t.heroTitleHighlight}</span>{" "}
+            {t.heroTitleEnd}
+          </h1>
+
+          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed fade-in" style={{ animationDelay: "0.2s" }}>
+            {t.heroSub}
+          </p>
+
+          <div className={`flex flex-col sm:flex-row items-center justify-center gap-3 fade-in ${isRTL ? "sm:flex-row-reverse" : ""}`} style={{ animationDelay: "0.3s" }}>
+            <Link href="/register">
+              <Button size="lg" className="btn-premium h-12 px-8 text-base gap-2 shadow-lg shadow-primary/25">
+                {t.getStarted}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link href="/courses">
+              <Button size="lg" variant="outline" className="h-12 px-8 text-base hover:bg-muted/50">
+                {t.exploreCoursesBtn}
+              </Button>
+            </Link>
+          </div>
        
 
           {/* Social proof */}
