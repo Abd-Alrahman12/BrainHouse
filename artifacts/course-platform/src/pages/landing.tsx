@@ -11,6 +11,15 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <Navbar />
 
+        {/* Hero */}
+      <section className="hero-gradient relative overflow-hidden">
+        <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-24 md:py-32 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8 fade-in">
+            <Zap className="w-3.5 h-3.5" />
+            <span>The modern learning platform</span>
+          </div>
+
     
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.1] fade-in" style={{ animationDelay: "0.1s" }}>
             {t.heroTitle}{" "}
