@@ -21,6 +21,13 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   const { name, email, password } = parsed.data;
 
+  // ✅ التحقق من صحة الإيميل
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400).json({ error: "Invalid email address" });
+    return;
+  }
+
   const existing = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing.length > 0) {
     res.status(400).json({ error: "Email already in use" });
@@ -28,7 +35,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const hashed = await bcrypt.hash(password, 10);
- const [user] = await db.insert(usersTable).values({ name, email, password: hashed, approved: true }).returning();
+  const [user] = await db.insert(usersTable).values({ name, email, password: hashed, approved: true }).returning();
 
   const token = signToken({ userId: user.id, role: user.role });
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
