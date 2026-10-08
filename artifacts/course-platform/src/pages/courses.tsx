@@ -25,9 +25,9 @@ export default function CoursesPage() {
     return matchSearch && matchCollege;
   });
 
-  const openWhatsApp = (title: string) => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${t.whatsappMsg}${title}`)}`, "_blank");
-  };
+const openWhatsApp = (title: string) => {
+  window.open(`https://wa.me/962786305380?text=${encodeURIComponent(`${t.whatsappMsg}${title}`)}`, "_blank");
+};
 
   return (
     <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
